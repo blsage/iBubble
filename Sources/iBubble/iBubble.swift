@@ -9,12 +9,14 @@ import SwiftUI
 
 struct iBubble: Shape {
     enum CaretEdge { case top, right, bottom, left }
-
+    enum CaretPositionType { case normalized, insetFromStart, insetFromEnd }
+    
     var cornerRadius: CGFloat
     var caretWidth: CGFloat
     var caretHeight: CGFloat
     var caretCornerRadius: CGFloat
     var caretPosition: CGFloat
+    var caretPositionType: CaretPositionType = .normalized
     var edge: CaretEdge
     var caretAngle: Angle = .degrees(0)
     
@@ -32,33 +34,76 @@ struct iBubble: Shape {
     }
     
     private func createCaretPath(in rect: CGRect) -> Path? {
-        let positionFactor = max(0, min(1, caretPosition))
-        
-        let caretBaseCenter: CGPoint
         let safeDistanceFromCorner = cornerRadius * 1.5
         let halfCaretWidth = caretWidth / 2
         
+        let caretBaseCenter: CGPoint
+        
         switch edge {
         case .top:
-            caretBaseCenter = CGPoint(x: rect.minX + rect.width * positionFactor, y: rect.minY)
+            let x: CGFloat
+            switch caretPositionType {
+            case .normalized:
+                let positionFactor = max(0, min(1, caretPosition))
+                x = rect.minX + rect.width * positionFactor
+            case .insetFromStart:
+                x = rect.minX + caretPosition
+            case .insetFromEnd:
+                x = rect.maxX - caretPosition
+            }
+            
+            caretBaseCenter = CGPoint(x: x, y: rect.minY)
             if caretBaseCenter.x < rect.minX + safeDistanceFromCorner || caretBaseCenter.x > rect.maxX - safeDistanceFromCorner {
                 return nil
             }
             
         case .right:
-            caretBaseCenter = CGPoint(x: rect.maxX, y: rect.minY + rect.height * positionFactor)
+            let y: CGFloat
+            switch caretPositionType {
+            case .normalized:
+                let positionFactor = max(0, min(1, caretPosition))
+                y = rect.minY + rect.height * positionFactor
+            case .insetFromStart:
+                y = rect.minY + caretPosition
+            case .insetFromEnd:
+                y = rect.maxY - caretPosition
+            }
+            
+            caretBaseCenter = CGPoint(x: rect.maxX, y: y)
             if caretBaseCenter.y < rect.minY + safeDistanceFromCorner || caretBaseCenter.y > rect.maxY - safeDistanceFromCorner {
                 return nil
             }
             
         case .bottom:
-            caretBaseCenter = CGPoint(x: rect.minX + rect.width * positionFactor, y: rect.maxY)
+            let x: CGFloat
+            switch caretPositionType {
+            case .normalized:
+                let positionFactor = max(0, min(1, caretPosition))
+                x = rect.minX + rect.width * positionFactor
+            case .insetFromStart:
+                x = rect.minX + caretPosition
+            case .insetFromEnd:
+                x = rect.maxX - caretPosition
+            }
+            
+            caretBaseCenter = CGPoint(x: x, y: rect.maxY)
             if caretBaseCenter.x < rect.minX + safeDistanceFromCorner || caretBaseCenter.x > rect.maxX - safeDistanceFromCorner {
                 return nil
             }
             
         case .left:
-            caretBaseCenter = CGPoint(x: rect.minX, y: rect.minY + rect.height * positionFactor)
+            let y: CGFloat
+            switch caretPositionType {
+            case .normalized:
+                let positionFactor = max(0, min(1, caretPosition))
+                y = rect.minY + rect.height * positionFactor
+            case .insetFromStart:
+                y = rect.minY + caretPosition
+            case .insetFromEnd:
+                y = rect.maxY - caretPosition
+            }
+            
+            caretBaseCenter = CGPoint(x: rect.minX, y: y)
             if caretBaseCenter.y < rect.minY + safeDistanceFromCorner || caretBaseCenter.y > rect.maxY - safeDistanceFromCorner {
                 return nil
             }
@@ -152,22 +197,113 @@ struct iBubble: Shape {
         path.addLine(to: end)
     }
 
-    init(cornerRadius: CGFloat, caretSize: CGFloat, caretCornerRadius: CGFloat, caretPosition: CGFloat, edge: CaretEdge, caretAngle: Angle = .degrees(0)) {
+    init(
+        cornerRadius: CGFloat,
+        caretSize: CGFloat,
+        caretCornerRadius: CGFloat,
+        caretPosition: CGFloat,
+        edge: CaretEdge,
+        caretAngle: Angle = .degrees(0)
+    ) {
         self.cornerRadius = cornerRadius
         self.caretWidth = caretSize
         self.caretHeight = caretSize
         self.caretCornerRadius = caretCornerRadius
         self.caretPosition = caretPosition
+        self.caretPositionType = .normalized
         self.edge = edge
         self.caretAngle = caretAngle
     }
     
-    init(cornerRadius: CGFloat, caretWidth: CGFloat, caretHeight: CGFloat, caretCornerRadius: CGFloat, caretPosition: CGFloat, edge: CaretEdge, caretAngle: Angle = .degrees(0)) {
+    init(
+        cornerRadius: CGFloat,
+        caretWidth: CGFloat,
+        caretHeight: CGFloat,
+        caretCornerRadius: CGFloat,
+        caretPosition: CGFloat,
+        edge: CaretEdge,
+        caretAngle: Angle = .degrees(0)
+    ) {
         self.cornerRadius = cornerRadius
         self.caretWidth = caretWidth
         self.caretHeight = caretHeight
         self.caretCornerRadius = caretCornerRadius
         self.caretPosition = caretPosition
+        self.caretPositionType = .normalized
+        self.edge = edge
+        self.caretAngle = caretAngle
+    }
+    
+    init(
+        cornerRadius: CGFloat,
+        caretWidth: CGFloat,
+        caretHeight: CGFloat,
+        caretCornerRadius: CGFloat,
+        caretInset: CGFloat,
+        edge: CaretEdge,
+        caretAngle: Angle = .degrees(0)
+    ) {
+        self.cornerRadius = cornerRadius
+        self.caretWidth = caretWidth
+        self.caretHeight = caretHeight
+        self.caretCornerRadius = caretCornerRadius
+        self.caretPosition = caretInset
+        self.caretPositionType = .insetFromStart
+        self.edge = edge
+        self.caretAngle = caretAngle
+    }
+    
+    init(
+        cornerRadius: CGFloat,
+        caretSize: CGFloat,
+        caretCornerRadius: CGFloat,
+        caretInset: CGFloat,
+        edge: CaretEdge,
+        caretAngle: Angle = .degrees(0)
+    ) {
+        self.cornerRadius = cornerRadius
+        self.caretWidth = caretSize
+        self.caretHeight = caretSize
+        self.caretCornerRadius = caretCornerRadius
+        self.caretPosition = caretInset
+        self.caretPositionType = .insetFromStart
+        self.edge = edge
+        self.caretAngle = caretAngle
+    }
+    
+    init(
+        cornerRadius: CGFloat,
+        caretWidth: CGFloat,
+        caretHeight: CGFloat,
+        caretCornerRadius: CGFloat,
+        caretInsetFromEnd: CGFloat,
+        edge: CaretEdge,
+        caretAngle: Angle = .degrees(0)
+    ) {
+        self.cornerRadius = cornerRadius
+        self.caretWidth = caretWidth
+        self.caretHeight = caretHeight
+        self.caretCornerRadius = caretCornerRadius
+        self.caretPosition = caretInsetFromEnd
+        self.caretPositionType = .insetFromEnd
+        self.edge = edge
+        self.caretAngle = caretAngle
+    }
+    
+    init(
+        cornerRadius: CGFloat,
+        caretSize: CGFloat,
+        caretCornerRadius: CGFloat,
+        caretInsetFromEnd: CGFloat,
+        edge: CaretEdge,
+        caretAngle: Angle = .degrees(0)
+    ) {
+        self.cornerRadius = cornerRadius
+        self.caretWidth = caretSize
+        self.caretHeight = caretSize
+        self.caretCornerRadius = caretCornerRadius
+        self.caretPosition = caretInsetFromEnd
+        self.caretPositionType = .insetFromEnd
         self.edge = edge
         self.caretAngle = caretAngle
     }
@@ -184,37 +320,54 @@ struct iBubble: Shape {
         )
         .fill(Color.blue)
         .frame(width: 300, height: 150)
+        .overlay(Text("Normalized: 0.5").foregroundColor(.white))
         
         iBubble(
             cornerRadius: 16,
             caretWidth: 24,
             caretHeight: 12,
             caretCornerRadius: 6,
-            caretPosition: 0.2,
-            edge: .right
+            caretInset: 50,
+            edge: .bottom
         )
         .fill(Color.green)
         .frame(width: 300, height: 150)
+        .overlay(Text("Inset from left: 50px").foregroundColor(.white))
         
         iBubble(
             cornerRadius: 16,
             caretSize: 24,
             caretCornerRadius: 6,
-            caretPosition: 0.8,
+            caretInsetFromEnd: 50,
             edge: .bottom
         )
         .fill(Color.orange)
         .frame(width: 300, height: 150)
+        .overlay(Text("Inset from right: 50px").foregroundColor(.white))
         
-        iBubble(
-            cornerRadius: 16,
-            caretSize: 24,
-            caretCornerRadius: 6,
-            caretPosition: 0.5,
-            edge: .left
-        )
-        .fill(Color.purple)
-        .frame(width: 300, height: 150)
+        HStack(spacing: 20) {
+            iBubble(
+                cornerRadius: 16,
+                caretSize: 24,
+                caretCornerRadius: 6,
+                caretInset: 30,
+                edge: .left
+            )
+            .fill(Color.purple)
+            .frame(width: 140, height: 150)
+            .overlay(Text("From top: 30px").foregroundColor(.white))
+            
+            iBubble(
+                cornerRadius: 16,
+                caretSize: 24,
+                caretCornerRadius: 6,
+                caretInsetFromEnd: 30,
+                edge: .right
+            )
+            .fill(Color.red)
+            .frame(width: 140, height: 150)
+            .overlay(Text("From bottom: 30px").foregroundColor(.white))
+        }
     }
     .padding()
 }
