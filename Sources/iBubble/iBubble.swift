@@ -7,9 +7,9 @@
 
 import SwiftUI
 
-struct iBubble: Shape {
-    enum CaretEdge { case top, right, bottom, left }
-    enum CaretPositionType { case normalized, insetFromStart, insetFromEnd }
+public struct iBubble: Shape {
+    public enum CaretEdge { case top, right, bottom, left }
+    public enum CaretPositionType { case normalized, insetFromStart, insetFromEnd }
     
     var cornerRadius: CGFloat
     var caretWidth: CGFloat
@@ -20,7 +20,7 @@ struct iBubble: Shape {
     var edge: CaretEdge
     var caretAngle: Angle = .degrees(0)
     
-    func path(in rect: CGRect) -> Path {
+    public func path(in rect: CGRect) -> Path {
         let basePath = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).path(in: rect)
         
         if let caretPath = createCaretPath(in: rect) {
@@ -197,7 +197,7 @@ struct iBubble: Shape {
         path.addLine(to: end)
     }
 
-    init(
+    public init(
         cornerRadius: CGFloat,
         caretSize: CGFloat,
         caretCornerRadius: CGFloat,
@@ -215,7 +215,7 @@ struct iBubble: Shape {
         self.caretAngle = caretAngle
     }
     
-    init(
+    public init(
         cornerRadius: CGFloat,
         caretWidth: CGFloat,
         caretHeight: CGFloat,
@@ -234,7 +234,7 @@ struct iBubble: Shape {
         self.caretAngle = caretAngle
     }
     
-    init(
+    public init(
         cornerRadius: CGFloat,
         caretWidth: CGFloat,
         caretHeight: CGFloat,
@@ -253,7 +253,7 @@ struct iBubble: Shape {
         self.caretAngle = caretAngle
     }
     
-    init(
+    public init(
         cornerRadius: CGFloat,
         caretSize: CGFloat,
         caretCornerRadius: CGFloat,
@@ -271,7 +271,7 @@ struct iBubble: Shape {
         self.caretAngle = caretAngle
     }
     
-    init(
+    public init(
         cornerRadius: CGFloat,
         caretWidth: CGFloat,
         caretHeight: CGFloat,
@@ -290,7 +290,7 @@ struct iBubble: Shape {
         self.caretAngle = caretAngle
     }
     
-    init(
+    public init(
         cornerRadius: CGFloat,
         caretSize: CGFloat,
         caretCornerRadius: CGFloat,
