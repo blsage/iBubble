@@ -8,8 +8,8 @@
 import SwiftUI
 
 public struct iBubble: Shape {
-    public enum CaretEdge { case top, right, bottom, left }
-    public enum CaretPositionType { case normalized, insetFromStart, insetFromEnd }
+    public enum CaretEdge: Sendable { case top, right, bottom, left }
+    public enum CaretPositionType: Sendable { case normalized, insetFromStart, insetFromEnd }
     
     var cornerRadius: CGFloat
     var caretWidth: CGFloat
