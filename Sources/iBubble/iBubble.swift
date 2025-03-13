@@ -19,26 +19,166 @@ public struct iBubble: Shape {
     var caretPositionType: CaretPositionType = .normalized
     var edge: CaretEdge
     var caretAngle: Angle = .degrees(0)
+    var insetAmount: CGFloat = 0
     
     public func path(in rect: CGRect) -> Path {
-        let basePath = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).path(in: rect)
+        var path = Path()
+        let rect = rect.insetBy(dx: insetAmount, dy: insetAmount)
         
-        if let caretPath = createCaretPath(in: rect) {
-            return Path { path in
-                path.addPath(basePath)
-                path.addPath(caretPath)
+        if let (caretStartPoint, caretTipPoint, caretEndPoint) = calculateCaretPoints(in: rect) {
+            let safeDistanceFromCorner = cornerRadius * 1.5
+            let caretBaseCenter = getCaretBaseCenter(in: rect)
+            
+            // Check if caret is too close to corners
+            var skipCaret = false
+            switch edge {
+            case .top, .bottom:
+                if caretBaseCenter.x < rect.minX + safeDistanceFromCorner || 
+                   caretBaseCenter.x > rect.maxX - safeDistanceFromCorner {
+                    skipCaret = true
+                }
+            case .left, .right:
+                if caretBaseCenter.y < rect.minY + safeDistanceFromCorner || 
+                   caretBaseCenter.y > rect.maxY - safeDistanceFromCorner {
+                    skipCaret = true
+                }
             }
+            
+            if skipCaret {
+                return RoundedRectangle(cornerRadius: cornerRadius - insetAmount, style: .continuous).path(in: rect)
+            }
+            
+            // Create a single continuous path
+            switch edge {
+            case .top:
+                createTopCaretPath(in: rect, path: &path, startPoint: caretStartPoint, tipPoint: caretTipPoint, endPoint: caretEndPoint)
+            case .right:
+                createRightCaretPath(in: rect, path: &path, startPoint: caretStartPoint, tipPoint: caretTipPoint, endPoint: caretEndPoint)
+            case .bottom:
+                createBottomCaretPath(in: rect, path: &path, startPoint: caretStartPoint, tipPoint: caretTipPoint, endPoint: caretEndPoint)
+            case .left:
+                createLeftCaretPath(in: rect, path: &path, startPoint: caretStartPoint, tipPoint: caretTipPoint, endPoint: caretEndPoint)
+            }
+        } else {
+            path = RoundedRectangle(cornerRadius: cornerRadius - insetAmount, style: .continuous).path(in: rect)
         }
         
-        return basePath
+        return path
     }
     
-    private func createCaretPath(in rect: CGRect) -> Path? {
-        let safeDistanceFromCorner = cornerRadius * 1.5
-        let halfCaretWidth = caretWidth / 2
+    private func createTopCaretPath(in rect: CGRect, path: inout Path, startPoint: CGPoint, tipPoint: CGPoint, endPoint: CGPoint) {
+        let cornerRadius = self.cornerRadius - insetAmount
         
-        let caretBaseCenter: CGPoint
+        path.move(to: CGPoint(x: rect.minX + cornerRadius, y: rect.minY))
+        path.addLine(to: startPoint)
         
+        if caretCornerRadius > 0 {
+            let tipRadius = min(caretCornerRadius, caretWidth/4, caretHeight/4)
+            drawRoundedTip(path: &path, from: startPoint, through: tipPoint, to: endPoint, radius: tipRadius)
+        } else {
+            path.addLine(to: tipPoint)
+            path.addLine(to: endPoint)
+        }
+        
+        path.addLine(to: CGPoint(x: rect.maxX - cornerRadius, y: rect.minY))
+        path.addArc(center: CGPoint(x: rect.maxX - cornerRadius, y: rect.minY + cornerRadius),
+                    radius: cornerRadius, startAngle: .degrees(270), endAngle: .degrees(0), clockwise: false)
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - cornerRadius))
+        path.addArc(center: CGPoint(x: rect.maxX - cornerRadius, y: rect.maxY - cornerRadius),
+                    radius: cornerRadius, startAngle: .degrees(0), endAngle: .degrees(90), clockwise: false)
+        path.addLine(to: CGPoint(x: rect.minX + cornerRadius, y: rect.maxY))
+        path.addArc(center: CGPoint(x: rect.minX + cornerRadius, y: rect.maxY - cornerRadius),
+                    radius: cornerRadius, startAngle: .degrees(90), endAngle: .degrees(180), clockwise: false)
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + cornerRadius))
+        path.addArc(center: CGPoint(x: rect.minX + cornerRadius, y: rect.minY + cornerRadius),
+                    radius: cornerRadius, startAngle: .degrees(180), endAngle: .degrees(270), clockwise: false)
+    }
+    
+    private func createRightCaretPath(in rect: CGRect, path: inout Path, startPoint: CGPoint, tipPoint: CGPoint, endPoint: CGPoint) {
+        let cornerRadius = self.cornerRadius - insetAmount
+        
+        path.move(to: CGPoint(x: rect.maxX, y: rect.minY + cornerRadius))
+        path.addLine(to: startPoint)
+        
+        if caretCornerRadius > 0 {
+            let tipRadius = min(caretCornerRadius, caretWidth/4, caretHeight/4)
+            drawRoundedTip(path: &path, from: startPoint, through: tipPoint, to: endPoint, radius: tipRadius)
+        } else {
+            path.addLine(to: tipPoint)
+            path.addLine(to: endPoint)
+        }
+        
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - cornerRadius))
+        path.addArc(center: CGPoint(x: rect.maxX - cornerRadius, y: rect.maxY - cornerRadius),
+                    radius: cornerRadius, startAngle: .degrees(0), endAngle: .degrees(90), clockwise: false)
+        path.addLine(to: CGPoint(x: rect.minX + cornerRadius, y: rect.maxY))
+        path.addArc(center: CGPoint(x: rect.minX + cornerRadius, y: rect.maxY - cornerRadius),
+                    radius: cornerRadius, startAngle: .degrees(90), endAngle: .degrees(180), clockwise: false)
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + cornerRadius))
+        path.addArc(center: CGPoint(x: rect.minX + cornerRadius, y: rect.minY + cornerRadius),
+                    radius: cornerRadius, startAngle: .degrees(180), endAngle: .degrees(270), clockwise: false)
+        path.addLine(to: CGPoint(x: rect.maxX - cornerRadius, y: rect.minY))
+        path.addArc(center: CGPoint(x: rect.maxX - cornerRadius, y: rect.minY + cornerRadius),
+                    radius: cornerRadius, startAngle: .degrees(270), endAngle: .degrees(0), clockwise: false)
+    }
+    
+    private func createBottomCaretPath(in rect: CGRect, path: inout Path, startPoint: CGPoint, tipPoint: CGPoint, endPoint: CGPoint) {
+        let cornerRadius = self.cornerRadius - insetAmount
+        
+        path.move(to: CGPoint(x: rect.maxX - cornerRadius, y: rect.maxY))
+        path.addLine(to: startPoint)
+        
+        if caretCornerRadius > 0 {
+            let tipRadius = min(caretCornerRadius, caretWidth/4, caretHeight/4)
+            drawRoundedTip(path: &path, from: startPoint, through: tipPoint, to: endPoint, radius: tipRadius)
+        } else {
+            path.addLine(to: tipPoint)
+            path.addLine(to: endPoint)
+        }
+        
+        path.addLine(to: CGPoint(x: rect.minX + cornerRadius, y: rect.maxY))
+        path.addArc(center: CGPoint(x: rect.minX + cornerRadius, y: rect.maxY - cornerRadius),
+                    radius: cornerRadius, startAngle: .degrees(90), endAngle: .degrees(180), clockwise: false)
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + cornerRadius))
+        path.addArc(center: CGPoint(x: rect.minX + cornerRadius, y: rect.minY + cornerRadius),
+                    radius: cornerRadius, startAngle: .degrees(180), endAngle: .degrees(270), clockwise: false)
+        path.addLine(to: CGPoint(x: rect.maxX - cornerRadius, y: rect.minY))
+        path.addArc(center: CGPoint(x: rect.maxX - cornerRadius, y: rect.minY + cornerRadius),
+                    radius: cornerRadius, startAngle: .degrees(270), endAngle: .degrees(0), clockwise: false)
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - cornerRadius))
+        path.addArc(center: CGPoint(x: rect.maxX - cornerRadius, y: rect.maxY - cornerRadius),
+                    radius: cornerRadius, startAngle: .degrees(0), endAngle: .degrees(90), clockwise: false)
+    }
+    
+    private func createLeftCaretPath(in rect: CGRect, path: inout Path, startPoint: CGPoint, tipPoint: CGPoint, endPoint: CGPoint) {
+        let cornerRadius = self.cornerRadius - insetAmount
+        
+        path.move(to: CGPoint(x: rect.minX, y: rect.maxY - cornerRadius))
+        path.addLine(to: startPoint)
+        
+        if caretCornerRadius > 0 {
+            let tipRadius = min(caretCornerRadius, caretWidth/4, caretHeight/4)
+            drawRoundedTip(path: &path, from: startPoint, through: tipPoint, to: endPoint, radius: tipRadius)
+        } else {
+            path.addLine(to: tipPoint)
+            path.addLine(to: endPoint)
+        }
+        
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + cornerRadius))
+        path.addArc(center: CGPoint(x: rect.minX + cornerRadius, y: rect.minY + cornerRadius),
+                    radius: cornerRadius, startAngle: .degrees(180), endAngle: .degrees(270), clockwise: false)
+        path.addLine(to: CGPoint(x: rect.maxX - cornerRadius, y: rect.minY))
+        path.addArc(center: CGPoint(x: rect.maxX - cornerRadius, y: rect.minY + cornerRadius),
+                    radius: cornerRadius, startAngle: .degrees(270), endAngle: .degrees(0), clockwise: false)
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - cornerRadius))
+        path.addArc(center: CGPoint(x: rect.maxX - cornerRadius, y: rect.maxY - cornerRadius),
+                    radius: cornerRadius, startAngle: .degrees(0), endAngle: .degrees(90), clockwise: false)
+        path.addLine(to: CGPoint(x: rect.minX + cornerRadius, y: rect.maxY))
+        path.addArc(center: CGPoint(x: rect.minX + cornerRadius, y: rect.maxY - cornerRadius),
+                    radius: cornerRadius, startAngle: .degrees(90), endAngle: .degrees(180), clockwise: false)
+    }
+    
+    private func getCaretBaseCenter(in rect: CGRect) -> CGPoint {
         switch edge {
         case .top:
             let x: CGFloat
@@ -51,11 +191,7 @@ public struct iBubble: Shape {
             case .insetFromEnd:
                 x = rect.maxX - caretPosition
             }
-            
-            caretBaseCenter = CGPoint(x: x, y: rect.minY)
-            if caretBaseCenter.x < rect.minX + safeDistanceFromCorner || caretBaseCenter.x > rect.maxX - safeDistanceFromCorner {
-                return nil
-            }
+            return CGPoint(x: x, y: rect.minY)
             
         case .right:
             let y: CGFloat
@@ -68,11 +204,7 @@ public struct iBubble: Shape {
             case .insetFromEnd:
                 y = rect.maxY - caretPosition
             }
-            
-            caretBaseCenter = CGPoint(x: rect.maxX, y: y)
-            if caretBaseCenter.y < rect.minY + safeDistanceFromCorner || caretBaseCenter.y > rect.maxY - safeDistanceFromCorner {
-                return nil
-            }
+            return CGPoint(x: rect.maxX, y: y)
             
         case .bottom:
             let x: CGFloat
@@ -85,11 +217,7 @@ public struct iBubble: Shape {
             case .insetFromEnd:
                 x = rect.maxX - caretPosition
             }
-            
-            caretBaseCenter = CGPoint(x: x, y: rect.maxY)
-            if caretBaseCenter.x < rect.minX + safeDistanceFromCorner || caretBaseCenter.x > rect.maxX - safeDistanceFromCorner {
-                return nil
-            }
+            return CGPoint(x: x, y: rect.maxY)
             
         case .left:
             let y: CGFloat
@@ -102,34 +230,36 @@ public struct iBubble: Shape {
             case .insetFromEnd:
                 y = rect.maxY - caretPosition
             }
-            
-            caretBaseCenter = CGPoint(x: rect.minX, y: y)
-            if caretBaseCenter.y < rect.minY + safeDistanceFromCorner || caretBaseCenter.y > rect.maxY - safeDistanceFromCorner {
+            return CGPoint(x: rect.minX, y: y)
+        }
+    }
+    
+    private func calculateCaretPoints(in rect: CGRect) -> (start: CGPoint, tip: CGPoint, end: CGPoint)? {
+        let safeDistanceFromCorner = cornerRadius * 1.5
+        let halfCaretWidth = caretWidth / 2
+        
+        let baseCenter = getCaretBaseCenter(in: rect)
+        
+        switch edge {
+        case .top:
+            if baseCenter.x < rect.minX + safeDistanceFromCorner || baseCenter.x > rect.maxX - safeDistanceFromCorner {
+                return nil
+            }
+        case .right:
+            if baseCenter.y < rect.minY + safeDistanceFromCorner || baseCenter.y > rect.maxY - safeDistanceFromCorner {
+                return nil
+            }
+        case .bottom:
+            if baseCenter.x < rect.minX + safeDistanceFromCorner || baseCenter.x > rect.maxX - safeDistanceFromCorner {
+                return nil
+            }
+        case .left:
+            if baseCenter.y < rect.minY + safeDistanceFromCorner || baseCenter.y > rect.maxY - safeDistanceFromCorner {
                 return nil
             }
         }
         
-        return Path { path in
-            let (startPoint, tipPoint, endPoint) = caretPoints(baseCenter: caretBaseCenter, edge: edge, halfWidth: halfCaretWidth, height: caretHeight)
-            
-            path.move(to: startPoint)
-            
-            if caretCornerRadius > 0 {
-                let tipRadius = min(caretCornerRadius, caretWidth/4, caretHeight/4)
-                drawRoundedTip(
-                    path: &path,
-                    from: startPoint,
-                    through: tipPoint,
-                    to: endPoint,
-                    radius: tipRadius
-                )
-            } else {
-                path.addLine(to: tipPoint)
-                path.addLine(to: endPoint)
-            }
-            
-            path.closeSubpath()
-        }
+        return caretPoints(baseCenter: baseCenter, edge: edge, halfWidth: halfCaretWidth, height: caretHeight)
     }
     
     private func caretPoints(
@@ -306,6 +436,14 @@ public struct iBubble: Shape {
         self.caretPositionType = .insetFromEnd
         self.edge = edge
         self.caretAngle = caretAngle
+    }
+}
+
+extension iBubble: InsettableShape {
+    public func inset(by amount: CGFloat) -> some InsettableShape {
+        var insetShape = self
+        insetShape.insetAmount = amount
+        return insetShape
     }
 }
 
